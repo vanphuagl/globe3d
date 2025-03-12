@@ -1,72 +1,71 @@
-const locations = [
-    {
-        id: "128a0773-5d9d-80c4-a096-eaea69adac96",
-        latitude: "-21.19123181367148",
-        longitude: "-46.97752440995988",
-        altitude: 900,
-        name: "Minas Gerais, Brazil"
-    },
-    {
-        id: "115a0773-5d9d-804f-9fbf-ce4cbad35205",
-        latitude: "5.769076296240815",
-        longitude: "38.91527699637387",
-        altitude: 1925,
-        name: "Arba Minch, Ethiopia"
-    },
-    {
-        id: "61ae1fb9-b413-49c6-91e7-5c0f0aec572d",
-        latitude: "10.0164197494427",
-        longitude: "-83.76483656278666",
-        altitude: 1200
-    },
-    {
-        id: "530d8bc7-3433-47ef-9b30-5721f49d2b35",
-        latitude: "10.0164197494427",
-        longitude: "-83.76483656278666",
-        altitude: 1200
-    },
-    {
-        id: "32167e0c-a7e7-4b54-82f3-2ab53485bdb3",
-        latitude: "-4.993201731235977",
-        longitude: "-78.92822063625584",
-        altitude: 1850
-    },
-    {
-        id: "3744fde4-19de-4bca-a71b-d37a4aa452b2",
-        latitude: "-0.43014185354251816",
-        longitude: "37.43002273611748",
-        altitude: 1650
-    },
-    {
-        id: "54c03257-92b1-43d9-8c98-164ce7874b4b",
-        latitude: "0.1313026555815544",
-        longitude: "-78.67645922940913",
-        altitude: 1350
-    },
-    {
-        id: "4c65d6df-0606-4c82-bb14-d85ccfea40f5",
-        latitude: "9.940684667930134",
-        longitude: "-83.71977748384002",
-        altitude: 1400
-    },
-    {
-        id: "612a1918-4ffa-44ab-921e-584b3318827a",
-        latitude: "7.675457015005138",
-        longitude: "36.83725047735557",
-        altitude: 1950
-    },
-    {
-        id: "5b8ed90d-7940-40e7-8cf6-ee4fb1c887d6",
-        latitude: "-2.0030071670877274",
-        longitude: "29.76745760405516",
-        altitude: 1800
-    },
-    {
-        id: "a09edbdc-a435-4635-9963-12cebf17b6ec",
-        latitude: "7.532485567926466",
-        longitude: "36.3967489998813",
-        altitude: 2100
-    }
+const locations = [{
+    id: "128a0773-5d9d-80c4-a096-eaea69adac96",
+    latitude: "-21.19123181367148",
+    longitude: "-46.97752440995988",
+    altitude: 900,
+    name: "Minas Gerais, Brazil"
+},
+{
+    id: "115a0773-5d9d-804f-9fbf-ce4cbad35205",
+    latitude: "5.769076296240815",
+    longitude: "38.91527699637387",
+    altitude: 1925,
+    name: "Arba Minch, Ethiopia"
+},
+{
+    id: "61ae1fb9-b413-49c6-91e7-5c0f0aec572d",
+    latitude: "10.0164197494427",
+    longitude: "-83.76483656278666",
+    altitude: 1200
+},
+{
+    id: "530d8bc7-3433-47ef-9b30-5721f49d2b35",
+    latitude: "10.0164197494427",
+    longitude: "-83.76483656278666",
+    altitude: 1200
+},
+{
+    id: "32167e0c-a7e7-4b54-82f3-2ab53485bdb3",
+    latitude: "-4.993201731235977",
+    longitude: "-78.92822063625584",
+    altitude: 1850
+},
+{
+    id: "3744fde4-19de-4bca-a71b-d37a4aa452b2",
+    latitude: "-0.43014185354251816",
+    longitude: "37.43002273611748",
+    altitude: 1650
+},
+{
+    id: "54c03257-92b1-43d9-8c98-164ce7874b4b",
+    latitude: "0.1313026555815544",
+    longitude: "-78.67645922940913",
+    altitude: 1350
+},
+{
+    id: "4c65d6df-0606-4c82-bb14-d85ccfea40f5",
+    latitude: "9.940684667930134",
+    longitude: "-83.71977748384002",
+    altitude: 1400
+},
+{
+    id: "612a1918-4ffa-44ab-921e-584b3318827a",
+    latitude: "7.675457015005138",
+    longitude: "36.83725047735557",
+    altitude: 1950
+},
+{
+    id: "5b8ed90d-7940-40e7-8cf6-ee4fb1c887d6",
+    latitude: "-2.0030071670877274",
+    longitude: "29.76745760405516",
+    altitude: 1800
+},
+{
+    id: "a09edbdc-a435-4635-9963-12cebf17b6ec",
+    latitude: "7.532485567926466",
+    longitude: "36.3967489998813",
+    altitude: 2100
+}
 ];
 
 function calculateSeasonalTilt(now = new Date()) {
@@ -84,8 +83,7 @@ function calculateTimeBasedRotation(now = new Date()) {
     return -((180 - (hoursInDegrees + minutesInDegrees)) % 360);
 }
 
-const getWidth = () =>
-    Math.min(Math.min(window.innerWidth, window.innerHeight) - 32, 1200);
+const getWidth = () => Math.min(Math.min(window.innerWidth, window.innerHeight) - 32, 1200);
 const getScale = (width) => width * 0.45;
 
 const width = getWidth();
@@ -96,17 +94,12 @@ const config = {
     seasonalTilt: calculateSeasonalTilt()
 };
 
-const svg = d3
-    .select("svg")
-    .attr("width", width)
-    .attr("height", height)
-    .style("background-color", "#f3f3f3");
+const svg = d3.select("svg").attr("width", width).attr("height", height).style("background-color", "#f3f3f3");
 
 const globeGroup = svg.append("g");
 const markerGroup = svg.append("g");
 
-const projection = d3
-    .geoOrthographic()
+const projection = d3.geoOrthographic()
     .scale(scale)
     .center([0, 0])
     .rotate([initialRotation, config.seasonalTilt, 0])
@@ -115,14 +108,12 @@ const projection = d3
 const path = d3.geoPath().projection(projection);
 const center = [width / 2, height / 2];
 
-//
 const altitudes = locations.map((loc) => loc.altitude);
 const minAltitude = Math.min(...altitudes);
 const maxAltitude = Math.max(...altitudes);
 const midAltitude = minAltitude + (maxAltitude - minAltitude) / 2;
 
-const colorScale = d3
-    .scaleLinear()
+const colorScale = d3.scaleLinear()
     .domain([minAltitude, midAltitude, maxAltitude])
     .range(["#949494", "#949494", "#949494"]);
 
@@ -131,22 +122,36 @@ let lastMouseX = null;
 let isDragging = false;
 let selectedMarker = null;
 
-const drag = d3
-    .drag()
-    .on("start", dragstarted)
-    .on("drag", dragged)
-    .on("end", dragended);
-
+const drag = d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended);
 svg.call(drag);
 
-let momentum = { velocity: 0, decay: 0.95 };
+let momentum = {
+    velocity: 0,
+    decay: 0.95
+};
 let animationFrameId = null;
 let lastTimestamp = null;
+
+// Zoom variables
+let minScale = scale * 0.6; // 60% kích thước ban đầu (tăng từ 0.5 để tránh quá nhỏ)
+let maxScale = scale * 1.8; // 180% kích thước ban đầu (giảm từ 2 để tránh quá lớn)
+
+function zoomed(event) {
+    // Điều chỉnh tốc độ zoom để mượt hơn
+    const zoomSensitivity = 0.0008; // Giảm độ nhạy zoom để mượt mà hơn
+    const newScale = Math.max(minScale, Math.min(maxScale, projection.scale() * (1 + event.deltaY * -zoomSensitivity)));
+    projection.scale(newScale);
+    updateGlobe();
+}
+
+svg.on("wheel", (event) => {
+    event.preventDefault();
+    zoomed(event);
+});
 
 function dragstarted(event) {
     isDragging = true;
     lastMouseX = event.x;
-    // Stop any ongoing momentum animation
     if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
     }
@@ -160,7 +165,6 @@ function dragged(event) {
     const timestamp = Date.now();
     const dragDelta = event.x - lastMouseX;
 
-    // Calculate instantaneous velocity
     if (lastTimestamp) {
         const dt = timestamp - lastTimestamp;
         momentum.velocity = dragDelta / dt;
@@ -178,7 +182,6 @@ function dragended() {
     isDragging = false;
     lastMouseX = null;
 
-    // Start momentum animation
     if (Math.abs(momentum.velocity) > 0.01) {
         const animate = (timestamp) => {
             if (isDragging) return;
@@ -187,10 +190,8 @@ function dragended() {
             projection.rotate([currentRotation, config.seasonalTilt, 0]);
             updateGlobe();
 
-            // Decay the velocity
             momentum.velocity *= momentum.decay;
 
-            // Continue animation if velocity is significant
             if (Math.abs(momentum.velocity) > 0.01) {
                 animationFrameId = requestAnimationFrame(animate);
             }
@@ -207,16 +208,14 @@ async function drawGlobe() {
         );
 
         const defs = svg.append("defs");
-        const filter = defs
-            .append("filter")
+        const filter = defs.append("filter")
             .attr("id", "glow")
             .attr("x", "-50%")
             .attr("y", "-50%")
             .attr("width", "200%")
             .attr("height", "200%");
 
-        filter
-            .append("feGaussianBlur")
+        filter.append("feGaussianBlur")
             .attr("stdDeviation", "3")
             .attr("result", "coloredBlur");
 
@@ -224,17 +223,17 @@ async function drawGlobe() {
         feMerge.append("feMergeNode").attr("in", "coloredBlur");
         feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
-        globeGroup
-            .append("path")
-            .datum({ type: "Sphere" })
+        globeGroup.append("path")
+            .datum({
+                type: "Sphere"
+            })
             .attr("class", "sphere")
             .attr("d", path)
             .style("fill", "#dfdfdf")
             .style("fill-opacity", 1)
             .style("filter", "url(#glow)");
 
-        globeGroup
-            .append("path")
+        globeGroup.append("path")
             .datum(topojson.feature(worldData, worldData.objects.countries))
             .attr("class", "countries")
             .attr("d", path)
@@ -260,7 +259,6 @@ function createMarkers() {
     markerGroups
         .append("circle")
         .attr("class", "ping")
-        .attr("r", 7)
         .attr("fill", "none")
         .attr("stroke", "#949494")
         .attr("stroke-width", 2)
@@ -270,7 +268,6 @@ function createMarkers() {
     markerGroups
         .append("circle")
         .attr("class", "marker")
-        .attr("r", 7)
         .attr("stroke", "#949494")
         .attr("stroke-width", 2)
         .attr("stroke-opacity", 1)
@@ -279,14 +276,12 @@ function createMarkers() {
     markerGroups
         .append("text")
         .attr("class", "marker-label")
-        .attr("dx", 0) // Căn giữa theo trục x
-        .attr("dy", -10) // Dịch lên trên marker (giá trị âm để nhãn nằm phía trên)
-        .text((d) => d.name) // Lấy tên từ dữ liệu
-        .style("font-size", "12px")
+        .attr("dx", 0)
+        .text((d) => d.name)
         .style("fill", "#333")
         .style("font-family", "Arial, sans-serif")
-        .style("text-anchor", "middle") // Căn giữa văn bản theo trục x
-        .style("pointer-events", "none"); // Đảm bảo nhãn không cản trở sự kiện chuột
+        .style("text-anchor", "middle")
+        .style("pointer-events", "none");
 
     updateMarkers();
 }
@@ -301,51 +296,61 @@ function updateMarkers() {
         .style("display", (d) => {
             const coordinate = [d.longitude, d.latitude];
             const gdistance = d3.geoDistance(coordinate, projection.invert(center));
-            return gdistance > 1.57 ? "none" : null; // Ẩn nếu ở mặt sau của globe
+            return gdistance > 1.57 ? "none" : null;
         });
 
     markerGroup.selectAll(".marker").attr("fill", (d) => colorScale(d.altitude));
 
-    // Cập nhật nhãn (nếu cần thêm logic đặc biệt)
     markerGroup.selectAll(".marker-label")
         .style("visibility", (d) => {
             const coordinate = [d.longitude, d.latitude];
             const gdistance = d3.geoDistance(coordinate, projection.invert(center));
-            return gdistance > 1.57 ? "hidden" : "visible"; // Ẩn nhãn nếu marker ở mặt sau
+            return gdistance > 1.57 ? "hidden" : "visible";
         });
 
-    // Update ping animations for the selected marker
+    // Tính toán scaleFactor và điều chỉnh kích thước marker, nhãn
+    const scaleFactor = projection.scale() / scale;
+    const markerSize = Math.min(Math.max(5 / Math.sqrt(scaleFactor), 3), 8); // Giới hạn marker từ 3px đến 8px
+    const fontSize = Math.min(Math.max(12 / Math.sqrt(scaleFactor), 8), 14); // Giới hạn font từ 8px đến 14px
+    const pingMaxSize = markerSize * 3.5; // Bán kính tối đa của ping (3.5 lần marker)
+
+    // Cập nhật kích thước marker
+    markerGroup.selectAll(".marker").attr("r", markerSize);
+
+    // Cập nhật kích thước và vị trí nhãn
+    markerGroup.selectAll(".marker-label")
+        .style("font-size", `${fontSize}px`)
+        .attr("dy", -markerSize * 2); // Điều chỉnh vị trí nhãn dựa trên kích thước marker
+
+    // Cập nhật hiệu ứng ping
     markerGroup.selectAll(".ping").each(function (d) {
         const ping = d3.select(this);
         if (d === selectedMarker) {
-            // If this is the selected marker, start the ping animation
             ping
                 .attr("opacity", 1)
+                .attr("r", markerSize)
                 .transition()
-                .duration(2000)
+                .duration(1500 / Math.sqrt(scaleFactor)) // Tốc độ animation mượt hơn
                 .ease(d3.easeCubicOut)
-                .attr("r", 30)
+                .attr("r", pingMaxSize)
                 .attr("opacity", 0)
                 .on("end", function () {
-                    // Restart the animation if this is still the selected marker
                     if (d === selectedMarker) {
                         d3.select(this)
-                            .attr("r", 7)
+                            .attr("r", markerSize)
                             .attr("opacity", 1)
                             .call(
                                 () =>
                                     this.parentElement.__transition__ ||
                                     ping
                                         .transition()
-                                        .duration(2000)
+                                        .duration(1500 / Math.sqrt(scaleFactor))
                                         .ease(d3.easeCubicOut)
-                                        .attr("r", 30)
+                                        .attr("r", pingMaxSize)
                                         .attr("opacity", 0)
                                         .on("end", function () {
                                             if (d === selectedMarker) {
-                                                // Reset and restart
-                                                d3.select(this).attr("r", 7);
-                                                // Recall the update to start a new ping
+                                                d3.select(this).attr("r", markerSize);
                                                 updateMarkers();
                                             }
                                         })
@@ -353,7 +358,7 @@ function updateMarkers() {
                     }
                 });
         } else {
-            ping.attr("opacity", 0).attr("r", 7);
+            ping.attr("opacity", 0).attr("r", markerSize);
         }
     });
 }
@@ -395,11 +400,13 @@ window.addEventListener("resize", () => {
     const newScale = getScale(newWidth);
 
     svg.attr("width", newWidth).attr("height", newHeight);
-
     projection.scale(newScale).translate([newWidth / 2, newHeight / 2]);
 
     center[0] = newWidth / 2;
     center[1] = newHeight / 2;
+
+    minScale = newScale * 0.6;
+    maxScale = newScale * 1.8;
 
     updateGlobe();
 });
