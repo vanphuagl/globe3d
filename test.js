@@ -1,210 +1,415 @@
-var w,
-    h,
-    scl,
-    is3d = true;
-var svg = d3.select("#svgGlobe").append("svg");
-var projection = d3.geoOrthographic();
+const locations = [{
+    id: "128a0773-5d9d-80c4-a096-eaea69adac96",
+    latitude: "-21.19123181367148",
+    longitude: "-46.97752440995988",
+    altitude: 900,
+    name: "Minas Gerais, Brazil"
+},
+{
+    id: "115a0773-5d9d-804f-9fbf-ce4cbad35205",
+    latitude: "5.769076296240815",
+    longitude: "38.91527699637387",
+    altitude: 1925,
+    name: "Arba Minch, Ethiopia"
+},
+{
+    id: "61ae1fb9-b413-49c6-91e7-5c0f0aec572d",
+    latitude: "10.0164197494427",
+    longitude: "-83.76483656278666",
+    altitude: 1200
+},
+{
+    id: "530d8bc7-3433-47ef-9b30-5721f49d2b35",
+    latitude: "10.0164197494427",
+    longitude: "-83.76483656278666",
+    altitude: 1200
+},
+{
+    id: "32167e0c-a7e7-4b54-82f3-2ab53485bdb3",
+    latitude: "-4.993201731235977",
+    longitude: "-78.92822063625584",
+    altitude: 1850
+},
+{
+    id: "3744fde4-19de-4bca-a71b-d37a4aa452b2",
+    latitude: "-0.43014185354251816",
+    longitude: "37.43002273611748",
+    altitude: 1650
+},
+{
+    id: "54c03257-92b1-43d9-8c98-164ce7874b4b",
+    latitude: "0.1313026555815544",
+    longitude: "-78.67645922940913",
+    altitude: 1350
+},
+{
+    id: "4c65d6df-0606-4c82-bb14-d85ccfea40f5",
+    latitude: "9.940684667930134",
+    longitude: "-83.71977748384002",
+    altitude: 1400
+},
+{
+    id: "612a1918-4ffa-44ab-921e-584b3318827a",
+    latitude: "7.675457015005138",
+    longitude: "36.83725047735557",
+    altitude: 1950
+},
+{
+    id: "5b8ed90d-7940-40e7-8cf6-ee4fb1c887d6",
+    latitude: "-2.0030071670877274",
+    longitude: "29.76745760405516",
+    altitude: 1800
+},
+{
+    id: "a09edbdc-a435-4635-9963-12cebf17b6ec",
+    latitude: "7.532485567926466",
+    longitude: "36.3967489998813",
+    altitude: 2100
+}
+];
 
-var path = d3.geoPath().projection(projection);
-var map = svg.append("g");
+function calculateSeasonalTilt(now = new Date()) {
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));
+    const dayAngle = 2 * Math.PI * ((dayOfYear - 80) / 365.25);
+    return -23.5 * Math.sin(dayAngle);
+}
 
-var drag = d3.drag().on("start", dragstarted).on("drag", dragged);
+function calculateTimeBasedRotation(now = new Date()) {
+    const hours = now.getUTCHours();
+    const minutes = now.getUTCMinutes();
+    const hoursInDegrees = hours * 15;
+    const minutesInDegrees = minutes * (15 / 60);
+    return -((180 - (hoursInDegrees + minutesInDegrees)) % 360);
+}
 
-var gpos0, o0, gpos1, o1;
-svg.call(drag);
+const getWidth = () => Math.min(Math.min(window.innerWidth, window.innerHeight) - 32, 1200);
+const getScale = (width) => width * 0.45;
 
-var zoom = d3
-    .zoom()
-
-    .on("zoom", zoomed);
-
-svg.call(zoom);
-
-d3.json(
-    "https://gist.githubusercontent.com/sarah37/dcca42b936545d9ee9f0bc8052e03dbd/raw/550cfee8177df10e515d82f7eb80bce4f72c52de/world-110m.json"
-).then(function (json) {
-    map
-        .append("path")
-        .datum({ type: "Sphere" })
-        .attr("class", "ocean")
-        .attr("d", path);
-
-    map
-        .append("path")
-        .datum(topojson.merge(json, json.objects.countries.geometries))
-        .attr("class", "land")
-        .attr("d", path);
-
-    map
-        .append("path")
-        .datum(
-            topojson.mesh(json, json.objects.countries, function (a, b) {
-                return a !== b;
-            })
-        )
-        .attr("class", "boundary")
-        .attr("d", path);
-});
-
-
-let resize = () => {
-    w = window.innerWidth;
-    h = window.innerHeight;
-    scl = Math.min(w, h) / 2.5;
-    projection.translate([w / 2, h / 2]);
-    svg.attr("width", w).attr("height", h);
-    map.selectAll("path").attr("d", path);
+const width = getWidth();
+const scale = getScale(width);
+const height = width;
+const initialRotation = calculateTimeBasedRotation();
+const config = {
+    seasonalTilt: calculateSeasonalTilt()
 };
 
-resize();
+const svg = d3.select("svg").attr("width", width).attr("height", height).style("background-color", "#f3f3f3");
 
-d3.select(window).on("resize", resize);
+const globeGroup = svg.append("g");
+const markerGroup = svg.append("g");
 
-function switchProjection() {
-    let s = projection.scale();
-    let r = projection.rotate();
-    let c = projection.center();
-    if ((is3d = !is3d)) {
-        projection = d3.geoOrthographic();
-        projection.rotate([-c[0], -c[1]]);
-    } else {
-        projection = d3.geoMercator();
-        projection.center([-r[0], -r[1]]);
+const projection = d3.geoOrthographic()
+    .scale(scale)
+    .center([0, 0])
+    .rotate([initialRotation, config.seasonalTilt, 0])
+    .translate([width / 2, height / 2]);
+
+const path = d3.geoPath().projection(projection);
+const center = [width / 2, height / 2];
+
+const altitudes = locations.map((loc) => loc.altitude);
+const minAltitude = Math.min(...altitudes);
+const maxAltitude = Math.max(...altitudes);
+const midAltitude = minAltitude + (maxAltitude - minAltitude) / 2;
+
+const colorScale = d3.scaleLinear()
+    .domain([minAltitude, midAltitude, maxAltitude])
+    .range(["#949494", "#949494", "#949494"]);
+
+let currentRotation = initialRotation;
+let lastMouseX = null;
+let isDragging = false;
+let selectedMarker = null;
+
+const drag = d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended);
+svg.call(drag);
+
+let momentum = {
+    velocity: 0,
+    decay: 0.95
+};
+let animationFrameId = null;
+let lastTimestamp = null;
+
+// Zoom variables
+let minScale = scale * 0.6; // 60% kích thước ban đầu (tăng từ 0.5 để tránh quá nhỏ)
+let maxScale = scale * 1.8; // 180% kích thước ban đầu (giảm từ 2 để tránh quá lớn)
+
+function zoomed(event) {
+    // Điều chỉnh tốc độ zoom để mượt hơn
+    const zoomSensitivity = 0.0008; // Giảm độ nhạy zoom để mượt mà hơn
+    const newScale = Math.max(minScale, Math.min(maxScale, projection.scale() * (1 + event.deltaY * -zoomSensitivity)));
+    projection.scale(newScale);
+    updateGlobe();
+}
+
+svg.on("wheel", (event) => {
+    event.preventDefault();
+    zoomed(event);
+});
+
+function dragstarted(event) {
+    isDragging = true;
+    lastMouseX = event.x;
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
     }
-    projection.scale(s);
-    map.selectAll("path").attr("d", path.projection(projection));
-    resize();
+    momentum.velocity = 0;
+    lastTimestamp = null;
 }
 
-function dragstarted() {
-    gpos0 = projection.invert(d3.mouse(this));
-    c0 = projection.center();
-}
+function dragged(event) {
+    if (!isDragging) return;
 
-function dragged() {
-    gpos1 = projection.invert(d3.mouse(this));
-    if (is3d) {
-        o0 = projection.rotate();
-        o1 = eulerAngles(gpos0, gpos1, o0);
-        o1 && projection.rotate(o1);
-    } else {
+    const timestamp = Date.now();
+    const dragDelta = event.x - lastMouseX;
+
+    if (lastTimestamp) {
+        const dt = timestamp - lastTimestamp;
+        momentum.velocity = dragDelta / dt;
     }
 
-    map.selectAll("path").attr("d", path);
+    currentRotation = (currentRotation + dragDelta * 0.5) % 360;
+    projection.rotate([currentRotation, config.seasonalTilt, 0]);
+    updateGlobe();
+
+    lastMouseX = event.x;
+    lastTimestamp = timestamp;
 }
 
-function zoomed() {
-    projection.scale(d3.event.transform.translate(projection).k * scl);
-    map.selectAll("path").attr("d", path);
-}
+function dragended() {
+    isDragging = false;
+    lastMouseX = null;
 
-var to_radians = Math.PI / 180;
-var to_degrees = 180 / Math.PI;
+    if (Math.abs(momentum.velocity) > 0.01) {
+        const animate = (timestamp) => {
+            if (isDragging) return;
 
-function cross(v0, v1) {
-    return [
-        v0[1] * v1[2] - v0[2] * v1[1],
-        v0[2] * v1[0] - v0[0] * v1[2],
-        v0[0] * v1[1] - v0[1] * v1[0],
-    ];
-}
+            currentRotation = (currentRotation + momentum.velocity * 10) % 360;
+            projection.rotate([currentRotation, config.seasonalTilt, 0]);
+            updateGlobe();
 
-function dot(v0, v1) {
-    for (var i = 0, sum = 0; v0.length > i; ++i) sum += v0[i] * v1[i];
-    return sum;
-}
+            momentum.velocity *= momentum.decay;
 
-function lonlat2xyz(coord) {
-    var lon = coord[0] * to_radians;
-    var lat = coord[1] * to_radians;
+            if (Math.abs(momentum.velocity) > 0.01) {
+                animationFrameId = requestAnimationFrame(animate);
+            }
+        };
 
-    var x = Math.cos(lat) * Math.cos(lon);
-
-    var y = Math.cos(lat) * Math.sin(lon);
-
-    var z = Math.sin(lat);
-
-    return [x, y, z];
-}
-
-function quaternion(v0, v1) {
-    if (v0 && v1) {
-        var w = cross(v0, v1), // vector pendicular to v0 & v1
-            w_len = Math.sqrt(dot(w, w)); // length of w
-
-        if (w_len == 0) return;
-
-        var theta = 0.5 * Math.acos(Math.max(-1, Math.min(1, dot(v0, v1)))),
-            qi = (w[2] * Math.sin(theta)) / w_len;
-        qj = (-w[1] * Math.sin(theta)) / w_len;
-        qk = (w[0] * Math.sin(theta)) / w_len;
-        qr = Math.cos(theta);
-
-        return theta && [qr, qi, qj, qk];
+        animationFrameId = requestAnimationFrame(animate);
     }
 }
 
-function euler2quat(e) {
-    if (!e) return;
+async function drawGlobe() {
+    try {
+        const worldData = await d3.json(
+            "https://gist.githubusercontent.com/mbostock/4090846/raw/d534aba169207548a8a3d670c9c2cc719ff05c47/world-110m.json"
+        );
 
-    var roll = 0.5 * e[0] * to_radians,
-        pitch = 0.5 * e[1] * to_radians,
-        yaw = 0.5 * e[2] * to_radians,
-        sr = Math.sin(roll),
-        cr = Math.cos(roll),
-        sp = Math.sin(pitch),
-        cp = Math.cos(pitch),
-        sy = Math.sin(yaw),
-        cy = Math.cos(yaw),
-        qi = sr * cp * cy - cr * sp * sy,
-        qj = cr * sp * cy + sr * cp * sy,
-        qk = cr * cp * sy - sr * sp * cy,
-        qr = cr * cp * cy + sr * sp * sy;
+        const defs = svg.append("defs");
+        const filter = defs.append("filter")
+            .attr("id", "glow")
+            .attr("x", "-50%")
+            .attr("y", "-50%")
+            .attr("width", "200%")
+            .attr("height", "200%");
 
-    return [qr, qi, qj, qk];
+        filter.append("feGaussianBlur")
+            .attr("stdDeviation", "3")
+            .attr("result", "coloredBlur");
+
+        const feMerge = filter.append("feMerge");
+        feMerge.append("feMergeNode").attr("in", "coloredBlur");
+        feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
+        globeGroup.append("path")
+            .datum({
+                type: "Sphere"
+            })
+            .attr("class", "sphere")
+            .attr("d", path)
+            .style("fill", "#dfdfdf")
+            .style("fill-opacity", 1)
+            .style("filter", "url(#glow)");
+
+        globeGroup.append("path")
+            .datum(topojson.feature(worldData, worldData.objects.countries))
+            .attr("class", "countries")
+            .attr("d", path)
+            .style("stroke", "#fff")
+            .style("stroke-width", "1px")
+            .style("stroke-opacity", 1)
+            .style("fill", "#fff")
+            .style("fill-opacity", 1);
+
+        createMarkers();
+    } catch (error) {
+        console.error("Error loading world data:", error);
+    }
 }
 
-function quatMultiply(q1, q2) {
-    if (!q1 || !q2) return;
+function createMarkers() {
+    const markerGroups = markerGroup
+        .selectAll("g")
+        .data(locations)
+        .join("g")
+        .attr("class", "marker-group");
 
-    var a = q1[0],
-        b = q1[1],
-        c = q1[2],
-        d = q1[3],
-        e = q2[0],
-        f = q2[1],
-        g = q2[2],
-        h = q2[3];
+    markerGroups
+        .append("circle")
+        .attr("class", "ping")
+        .attr("fill", "none")
+        .attr("stroke", "#949494")
+        .attr("stroke-width", 2)
+        .attr("opacity", 0)
+        .style("filter", "url(#glow)");
 
-    return [
-        a * e - b * f - c * g - d * h,
-        b * e + a * f + c * h - d * g,
-        a * g - b * h + c * e + d * f,
-        a * h + b * g - c * f + d * e,
-    ];
+    markerGroups
+        .append("circle")
+        .attr("class", "marker")
+        .attr("stroke", "#949494")
+        .attr("stroke-width", 2)
+        .attr("stroke-opacity", 1)
+        .style("filter", "url(#glow)");
+
+    markerGroups
+        .append("text")
+        .attr("class", "marker-label")
+        .attr("dx", 0)
+        .text((d) => d.name)
+        .style("fill", "#333")
+        .style("font-family", "Arial, sans-serif")
+        .style("text-anchor", "middle")
+        .style("pointer-events", "none");
+
+    updateMarkers();
 }
 
-function quat2euler(t) {
-    if (!t) return;
+function updateMarkers() {
+    markerGroup
+        .selectAll(".marker-group")
+        .attr("transform", (d) => {
+            const [x, y] = projection([d.longitude, d.latitude]);
+            return `translate(${x}, ${y})`;
+        })
+        .style("display", (d) => {
+            const coordinate = [d.longitude, d.latitude];
+            const gdistance = d3.geoDistance(coordinate, projection.invert(center));
+            return gdistance > 1.57 ? "none" : null;
+        });
 
-    return [
-        Math.atan2(
-            2 * (t[0] * t[1] + t[2] * t[3]),
-            1 - 2 * (t[1] * t[1] + t[2] * t[2])
-        ) * to_degrees,
-        Math.asin(Math.max(-1, Math.min(1, 2 * (t[0] * t[2] - t[3] * t[1])))) *
-        to_degrees,
-        Math.atan2(
-            2 * (t[0] * t[3] + t[1] * t[2]),
-            1 - 2 * (t[2] * t[2] + t[3] * t[3])
-        ) * to_degrees,
-    ];
+    markerGroup.selectAll(".marker").attr("fill", (d) => colorScale(d.altitude));
+
+    markerGroup.selectAll(".marker-label")
+        .style("visibility", (d) => {
+            const coordinate = [d.longitude, d.latitude];
+            const gdistance = d3.geoDistance(coordinate, projection.invert(center));
+            return gdistance > 1.57 ? "hidden" : "visible";
+        });
+
+    // Tính toán scaleFactor và điều chỉnh kích thước marker, nhãn
+    const scaleFactor = projection.scale() / scale;
+    const markerSize = Math.min(Math.max(5 / Math.sqrt(scaleFactor), 3), 8); // Giới hạn marker từ 3px đến 8px
+    const fontSize = Math.min(Math.max(12 / Math.sqrt(scaleFactor), 8), 14); // Giới hạn font từ 8px đến 14px
+    const pingMaxSize = markerSize * 3.5; // Bán kính tối đa của ping (3.5 lần marker)
+
+    // Cập nhật kích thước marker
+    markerGroup.selectAll(".marker").attr("r", markerSize);
+
+    // Cập nhật kích thước và vị trí nhãn
+    markerGroup.selectAll(".marker-label")
+        .style("font-size", `${fontSize}px`)
+        .attr("dy", -markerSize * 2); // Điều chỉnh vị trí nhãn dựa trên kích thước marker
+
+    // Cập nhật hiệu ứng ping
+    markerGroup.selectAll(".ping").each(function (d) {
+        const ping = d3.select(this);
+        if (d === selectedMarker) {
+            ping
+                .attr("opacity", 1)
+                .attr("r", markerSize)
+                .transition()
+                .duration(1500 / Math.sqrt(scaleFactor)) // Tốc độ animation mượt hơn
+                .ease(d3.easeCubicOut)
+                .attr("r", pingMaxSize)
+                .attr("opacity", 0)
+                .on("end", function () {
+                    if (d === selectedMarker) {
+                        d3.select(this)
+                            .attr("r", markerSize)
+                            .attr("opacity", 1)
+                            .call(
+                                () =>
+                                    this.parentElement.__transition__ ||
+                                    ping
+                                        .transition()
+                                        .duration(1500 / Math.sqrt(scaleFactor))
+                                        .ease(d3.easeCubicOut)
+                                        .attr("r", pingMaxSize)
+                                        .attr("opacity", 0)
+                                        .on("end", function () {
+                                            if (d === selectedMarker) {
+                                                d3.select(this).attr("r", markerSize);
+                                                updateMarkers();
+                                            }
+                                        })
+                            );
+                    }
+                });
+        } else {
+            ping.attr("opacity", 0).attr("r", markerSize);
+        }
+    });
 }
 
-function eulerAngles(v0, v1, o0) {
-    var t = quatMultiply(
-        euler2quat(o0),
-        quaternion(lonlat2xyz(v0), lonlat2xyz(v1))
-    );
-    return quat2euler(t);
+function updateGlobe() {
+    globeGroup.selectAll("path").attr("d", path);
+    updateMarkers();
 }
+
+function focusLocation(id, duration = 1000) {
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        momentum.velocity = 0;
+    }
+
+    const location = locations.find((loc) => loc.id === id);
+    if (!location) return;
+
+    selectedMarker = location;
+
+    const rotation = [-location.longitude, config.seasonalTilt, 0];
+
+    d3.transition()
+        .duration(duration)
+        .ease(d3.easeQuadInOut)
+        .tween("rotate", () => {
+            const r = d3.interpolate(projection.rotate(), rotation);
+            return (t) => {
+                projection.rotate(r(t));
+                currentRotation = r(t)[0];
+                updateGlobe();
+            };
+        });
+}
+
+window.addEventListener("resize", () => {
+    const newWidth = getWidth();
+    const newHeight = newWidth;
+    const newScale = getScale(newWidth);
+
+    svg.attr("width", newWidth).attr("height", newHeight);
+    projection.scale(newScale).translate([newWidth / 2, newHeight / 2]);
+
+    center[0] = newWidth / 2;
+    center[1] = newHeight / 2;
+
+    minScale = newScale * 0.6;
+    maxScale = newScale * 1.8;
+
+    updateGlobe();
+});
+
+drawGlobe();
+window.focusLocation = focusLocation;

@@ -1,0 +1,64 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.globe {
+  width: 100vw;
+  height: 80vh;
+}
+
+.globe_container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: #f3f3f3;
+  cursor: all-scroll;
+}
+
+.ocean {
+  fill: #dfdfdf;
+  stroke: #dfdfdf;
+  stroke-width: 0;
+  pointer-events: all;
+  transition-duration: 0.4s;
+  transition-property: fill, stroke;
+}
+
+.land {
+  fill: #fff;
+  pointer-events: all;
+  transition: fill 0.4s;
+}
+
+.boundary {
+  fill: none;
+  stroke: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.marker {
+  stroke: #949494;
+  stroke-width: 2;
+  stroke-opacity: 1;
+}
+
+.ping {
+  fill: none;
+  stroke: #949494;
+  stroke-width: 2;
+}
+
+.marker-label {
+  font-size: 12px;
+  fill: #333;
+  font-family: Arial, sans-serif;
+  text-anchor: middle;
+  pointer-events: none;
+}
