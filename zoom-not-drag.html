@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Globe Map 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .globe {
+            width: 100vw;
+            height: 80vh;
+            position: relative;
+        }
+
+        .globe_container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-color: #f3f3f3;
+        }
+
+        .ocean {
+            fill: #dfdfdf;
+            stroke: #dfdfdf;
+            stroke-width: 0;
+            pointer-events: all;
+            transition-duration: 0.4s;
+            transition-property: fill, stroke;
+        }
+
+        .land {
+            fill: #fff;
+            pointer-events: all;
+            transition: fill 0.4s;
+        }
+
+        .boundary {
+            fill: none;
+            stroke: none;
+            stroke-linejoin: round;
+            stroke-linecap: round;
+            vector-effect: non-scaling-stroke;
+        }
+
+        .marker {
+            stroke: #949494;
+            stroke-width: 2;
+            stroke-opacity: 1;
+        }
+
+        .ping {
+            fill: none;
+            stroke: #949494;
+            stroke-width: 2;
+        }
+
+        .marker-label {
+            font-size: 12px;
+            fill: #333;
+            font-family: Arial, sans-serif;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        .globe-svg g {
+            cursor: all-scroll;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="globe">
+            <div class="globe_container">
+                <div id="svgGlobe"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/topojson.v1.min.js"></script>
+    <script>
+        const locations = [
+            { id: "a1b2c3d4-5e6f-7890-1234-56789abcdef0", name: "Tokyo, Japan", latitude: "35.6762", longitude: "139.6503", altitude: 40 },
+            { id: "b2c3d4e5-6f78-9012-3456-789abcdef01", name: "New York, USA", latitude: "40.7128", longitude: "-74.0060", altitude: 10 },
+            { id: "d4e5f6g7-8901-2345-6789-abcdef0123", name: "Sydney, Australia", latitude: "-33.8688", longitude: "151.2093", altitude: 20 },
+            { id: "e5f6g7h8-9012-3456-789a-bcdef01234", name: "Reykjavik, Iceland", latitude: "64.1355", longitude: "-21.8954", altitude: 15 },
+            { id: "f6g7h8i9-0123-4567-89ab-cdef012345", name: "Lima, Peru", latitude: "-12.0464", longitude: "-77.0428", altitude: 154 },
+            { id: "h8i9j0k1-2345-6789-abcd-ef01234567", name: "Moscow, Russia", latitude: "55.7558", longitude: "37.6173", altitude: 156 },
+            { id: "k1l2m3n4-5678-9abc-def0-123456789a", name: "Bangkok, Thailand", latitude: "13.7563", longitude: "100.5018", altitude: 2 }
+        ];
+
+        var w, h, scl, is3d = true;
+        var svg = d3.select("#svgGlobe").append("svg").attr("class", "globe-svg");
+        var projection = d3.geoOrthographic();
+        var path = d3.geoPath().projection(projection);
+        var map = svg.append("g");
+        var markerGroup = svg.append("g").attr("class", "markers");
+
+        // Thêm zoom behavior trực tiếp cho map (g)
+        var zoom = d3.zoom()
+            .scaleExtent([0.5, 3]) // Giới hạn zoom tối đa là 3
+            .on("zoom", zoomed);
+
+        // Áp dụng zoom cho map thay vì interactionLayer
+        map.call(zoom);
+
+        const altitudes = locations.map((loc) => loc.altitude);
+        const minAltitude = Math.min(...altitudes);
+        const maxAltitude = Math.max(...altitudes);
+        const midAltitude = minAltitude + (maxAltitude - minAltitude) / 2;
+        const colorScale = d3.scaleLinear()
+            .domain([minAltitude, midAltitude, maxAltitude])
+            .range(["#949494", "#949494", "#949494"]);
+
+        let selectedMarker = null;
+
+        const defs = svg.append("defs");
+        const filter = defs.append("filter")
+            .attr("id", "glow")
+            .attr("x", "-50%")
+            .attr("y", "-50%")
+            .attr("width", "200%")
+            .attr("height", "200%");
+        filter.append("feGaussianBlur")
+            .attr("stdDeviation", "3")
+            .attr("result", "coloredBlur");
+        const feMerge = filter.append("feMerge");
+        feMerge.append("feMergeNode").attr("in", "coloredBlur");
+        feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
+        d3.json("https://gist.githubusercontent.com/sarah37/dcca42b936545d9ee9f0bc8052e03dbd/raw/550cfee8177df10e515d82f7eb80bce4f72c52de/world-110m.json")
+            .then(function (json) {
+                map.append("path")
+                    .datum({ type: "Sphere" })
+                    .attr("class", "ocean")
+                    .attr("d", path);
+
+                map.append("path")
+                    .datum(topojson.merge(json, json.objects.countries.geometries))
+                    .attr("class", "land")
+                    .attr("d", path);
+
+                map.append("path")
+                    .datum(topojson.mesh(json, json.objects.countries, function (a, b) { return a !== b; }))
+                    .attr("class", "boundary")
+                    .attr("d", path);
+
+                const markerGroups = markerGroup
+                    .selectAll("g")
+                    .data(locations)
+                    .join("g")
+                    .attr("class", "marker-group");
+
+                markerGroups.append("circle")
+                    .attr("class", "ping")
+                    .attr("fill", "none")
+                    .attr("stroke", "#949494")
+                    .attr("stroke-width", 2)
+                    .attr("opacity", 0)
+                    .style("filter", "url(#glow)");
+
+                markerGroups.append("circle")
+                    .attr("class", "marker")
+                    .attr("stroke", "#949494")
+                    .attr("stroke-width", 2)
+                    .attr("stroke-opacity", 1)
+                    .style("filter", "url(#glow)");
+
+                markerGroups.append("text")
+                    .attr("class", "marker-label")
+                    .attr("dx", 0)
+                    .text((d) => d.name || "Unnamed")
+                    .style("fill", "#333")
+                    .style("font-family", "Arial, sans-serif")
+                    .style("text-anchor", "middle")
+                    .style("pointer-events", "none");
+
+                updateMarkers();
+            })
+            .catch(function (error) {
+                console.error("Error loading JSON:", error);
+            });
+
+        function updateMarkers() {
+            if (!markerGroup) return;
+
+            const centerCoords = projection.invert([w / 2, h / 2]);
+            markerGroup.selectAll(".marker-group")
+                .attr("transform", (d) => {
+                    const [x, y] = projection([d.longitude, d.latitude]);
+                    return `translate(${x}, ${y})`;
+                })
+                .style("display", (d) => {
+                    const coordinate = [d.longitude, d.latitude];
+                    const gdistance = d3.geoDistance(coordinate, projection.invert([w / 2, h / 2]));
+                    return gdistance > 1.57 ? "none" : null;
+                });
+
+            markerGroup.selectAll(".marker")
+                .attr("fill", (d) => colorScale(d.altitude));
+
+            markerGroup.selectAll(".marker-label")
+                .style("visibility", (d) => {
+                    const coordinate = [d.longitude, d.latitude];
+                    const gdistance = d3.geoDistance(coordinate, projection.invert([w / 2, h / 2]));
+                    return gdistance > 1.57 ? "hidden" : "visible";
+                });
+
+            const scaleFactor = projection.scale() / scl;
+            const markerSize = Math.min(Math.max(5 / Math.sqrt(scaleFactor), 3), 8);
+            const fontSize = Math.min(Math.max(12 / Math.sqrt(scaleFactor), 8), 14);
+            const pingMaxSize = markerSize * 3.5;
+
+            markerGroup.selectAll(".marker").attr("r", markerSize);
+            markerGroup.selectAll(".marker-label")
+                .style("font-size", `${fontSize}px`)
+                .attr("dy", -markerSize * 2);
+
+            markerGroup.selectAll(".ping").each(function (d) {
+                const ping = d3.select(this);
+                if (d === selectedMarker) {
+                    ping.attr("opacity", 1)
+                        .attr("r", markerSize)
+                        .transition()
+                        .duration(1500 / Math.sqrt(scaleFactor))
+                        .ease(d3.easeCubicOut)
+                        .attr("r", pingMaxSize)
+                        .attr("opacity", 0)
+                        .on("end", function () {
+                            if (d === selectedMarker) {
+                                d3.select(this)
+                                    .attr("r", markerSize)
+                                    .attr("opacity", 1)
+                                    .transition()
+                                    .duration(1500 / Math.sqrt(scaleFactor))
+                                    .ease(d3.easeCubicOut)
+                                    .attr("r", pingMaxSize)
+                                    .attr("opacity", 0)
+                                    .on("end", function () {
+                                        if (d === selectedMarker) {
+                                            d3.select(this).attr("r", markerSize);
+                                            updateMarkers();
+                                        }
+                                    });
+                            }
+                        });
+                } else {
+                    ping.attr("opacity", 0).attr("r", markerSize);
+                }
+            });
+        }
+
+        let resize = () => {
+            w = window.innerWidth;
+            h = window.innerHeight * 0.8;
+            scl = Math.min(w, h) / 2.5;
+            projection.translate([w / 2, h / 2]).scale(scl);
+
+            svg.attr("width", w).attr("height", h);
+            map.selectAll("path").attr("d", path);
+            updateMarkers();
+        };
+
+        resize();
+        d3.select(window).on("resize", resize);
+
+        function switchProjection() {
+            let s = projection.scale();
+            let r = projection.rotate();
+            let c = projection.center();
+            if ((is3d = !is3d)) {
+                projection = d3.geoOrthographic();
+                projection.rotate([-c[0], -c[1]]);
+            } else {
+                projection = d3.geoMercator();
+                projection.center([-r[0], -r[1]]);
+            }
+            projection.scale(s);
+            map.selectAll("path").attr("d", path.projection(projection));
+            resize();
+        }
+
+        var drag = d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged);
+
+        // Áp dụng drag cho toàn bộ SVG để kéo bản đồ
+        svg.call(drag);
+
+        function dragstarted(d) {
+            const e = d3.event;
+            if (e.touches && e.touches.length > 1) return; // Bỏ qua nếu có 2 ngón tay (dành cho zoom)
+            gpos0 = projection.invert([e.x, e.y]);
+            c0 = projection.center();
+        }
+
+        function dragged(d) {
+            const e = d3.event;
+            if (e.touches && e.touches.length > 1) return; // Bỏ qua nếu có 2 ngón tay
+            gpos1 = projection.invert([e.x, e.y]);
+            if (is3d) {
+                o0 = projection.rotate();
+                o1 = eulerAngles(gpos0, gpos1, o0);
+                o1 && projection.rotate(o1);
+            }
+            map.selectAll("path").attr("d", path);
+            updateMarkers();
+        }
+
+        function zoomed(d) {
+            const e = d3.event;
+            if (e.sourceEvent && e.sourceEvent.touches && e.sourceEvent.touches.length !== 2) return; // Chỉ zoom khi có 2 ngón tay
+
+            const transform = e.transform;
+            let scale = transform.k;
+            const maxScale = 3; // Giới hạn zoom tối đa
+            scale = Math.min(scale, maxScale);
+
+            // Áp dụng zoom chỉ cho map (g)
+            map.attr("transform", `translate(${w / 2}, ${h / 2}) scale(${scale}) translate(${-w / 2}, ${-h / 2})`);
+            markerGroup.attr("transform", `translate(${w / 2}, ${h / 2}) scale(${scale}) translate(${-w / 2}, ${-h / 2})`);
+
+            map.selectAll("path").attr("d", path);
+            updateMarkers();
+        }
+
+        var to_radians = Math.PI / 180;
+        var to_degrees = 180 / Math.PI;
+
+        function cross(v0, v1) {
+            return [
+                v0[1] * v1[2] - v0[2] * v1[1],
+                v0[2] * v1[0] - v0[0] * v1[2],
+                v0[0] * v1[1] - v0[1] * v1[0],
+            ];
+        }
+
+        function dot(v0, v1) {
+            for (var i = 0, sum = 0; v0.length > i; ++i) sum += v0[i] * v1[i];
+            return sum;
+        }
+
+        function lonlat2xyz(coord) {
+            var lon = coord[0] * to_radians;
+            var lat = coord[1] * to_radians;
+            var x = Math.cos(lat) * Math.cos(lon);
+            var y = Math.cos(lat) * Math.sin(lon);
+            var z = Math.sin(lat);
+            return [x, y, z];
+        }
+
+        function quaternion(v0, v1) {
+            if (v0 && v1) {
+                var w = cross(v0, v1);
+                var w_len = Math.sqrt(dot(w, w));
+                if (w_len == 0) return;
+                var theta = 0.5 * Math.acos(Math.max(-1, Math.min(1, dot(v0, v1))));
+                var qi = (w[2] * Math.sin(theta)) / w_len;
+                var qj = (-w[1] * Math.sin(theta)) / w_len;
+                var qk = (w[0] * Math.sin(theta)) / w_len;
+                var qr = Math.cos(theta);
+                return theta && [qr, qi, qj, qk];
+            }
+        }
+
+        function euler2quat(e) {
+            if (!e) return;
+            var roll = 0.5 * e[0] * to_radians,
+                pitch = 0.5 * e[1] * to_radians,
+                yaw = 0.5 * e[2] * to_radians,
+                sr = Math.sin(roll),
+                cr = Math.cos(roll),
+                sp = Math.sin(pitch),
+                cp = Math.cos(pitch),
+                sy = Math.sin(yaw),
+                cy = Math.cos(yaw),
+                qi = sr * cp * cy - cr * sp * sy,
+                qj = cr * sp * cy + sr * cp * sy,
+                qk = cr * cp * sy - sr * sp * cy,
+                qr = cr * cp * cy + sr * sp * sy;
+            return [qr, qi, qj, qk];
+        }
+
+        function quatMultiply(q1, q2) {
+            if (!q1 || !q2) return;
+            var a = q1[0], b = q1[1], c = q1[2], d = q1[3],
+                e = q2[0], f = q2[1], g = q2[2], h = q2[3];
+            return [
+                a * e - b * f - c * g - d * h,
+                b * e + a * f + c * h - d * g,
+                a * g - b * h + c * e + d * f,
+                a * h + b * g - c * f + d * e,
+            ];
+        }
+
+        function quat2euler(t) {
+            if (!t) return;
+            return [
+                Math.atan2(2 * (t[0] * t[1] + t[2] * t[3]), 1 - 2 * (t[1] * t[1] + t[2] * t[2])) * to_degrees,
+                Math.asin(Math.max(-1, Math.min(1, 2 * (t[0] * t[2] - t[3] * t[1])))) * to_degrees,
+                Math.atan2(2 * (t[0] * t[3] + t[1] * t[2]), 1 - 2 * (t[2] * t[2] + t[3] * t[3])) * to_degrees,
+            ];
+        }
+
+        function eulerAngles(v0, v1, o0) {
+            var t = quatMultiply(euler2quat(o0), quaternion(lonlat2xyz(v0), lonlat2xyz(v1)));
+            return quat2euler(t);
+        }
+    </script>
+</body>
+</html>
