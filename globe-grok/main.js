@@ -9,18 +9,21 @@ const locations = [
 ];
 
 var w, h, scl, is3d = true;
-var svg = d3.select("#svgGlobe").append("svg");
+var svg = d3.select("#svgGlobe").append("svg").attr("class", "globe-svg");
 var projection = d3.geoOrthographic();
 var path = d3.geoPath().projection(projection);
 var map = svg.append("g");
 var markerGroup = svg.append("g").attr("class", "markers");
+var interactionLayer = svg.append("g").attr("class", "interaction-layer");
 
-var drag = d3.drag().on("start", dragstarted).on("drag", dragged);
-var gpos0, o0, gpos1, o1;
-svg.call(drag);
+var drag = d3.drag()
+    .on("start", dragstarted)
+    .on("drag", dragged);
+var zoom = d3.zoom()
+    .scaleExtent([0.5, 3]) // Giới hạn zoom tối đa là 3
+    .on("zoom", zoomed);
 
-var zoom = d3.zoom().on("zoom", zoomed);
-svg.call(zoom);
+interactionLayer.call(drag).call(zoom);
 
 const altitudes = locations.map((loc) => loc.altitude);
 const minAltitude = Math.min(...altitudes);
@@ -46,60 +49,58 @@ const feMerge = filter.append("feMerge");
 feMerge.append("feMergeNode").attr("in", "coloredBlur");
 feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
-d3.json(
-    "https://gist.githubusercontent.com/sarah37/dcca42b936545d9ee9f0bc8052e03dbd/raw/550cfee8177df10e515d82f7eb80bce4f72c52de/world-110m.json"
-).then(function (json) {
-    map.append("path")
-        .datum({ type: "Sphere" })
-        .attr("class", "ocean")
-        .attr("d", path);
+d3.json("https://gist.githubusercontent.com/sarah37/dcca42b936545d9ee9f0bc8052e03dbd/raw/550cfee8177df10e515d82f7eb80bce4f72c52de/world-110m.json")
+    .then(function (json) {
+        map.append("path")
+            .datum({ type: "Sphere" })
+            .attr("class", "ocean")
+            .attr("d", path);
 
-    map.append("path")
-        .datum(topojson.merge(json, json.objects.countries.geometries))
-        .attr("class", "land")
-        .attr("d", path);
+        map.append("path")
+            .datum(topojson.merge(json, json.objects.countries.geometries))
+            .attr("class", "land")
+            .attr("d", path);
 
-    map.append("path")
-        .datum(topojson.mesh(json, json.objects.countries, function (a, b) {
-            return a !== b;
-        }))
-        .attr("class", "boundary")
-        .attr("d", path);
+        map.append("path")
+            .datum(topojson.mesh(json, json.objects.countries, function (a, b) { return a !== b; }))
+            .attr("class", "boundary")
+            .attr("d", path);
 
-    const markerGroups = markerGroup
-        .selectAll("g")
-        .data(locations)
-        .join("g")
-        .attr("class", "marker-group");
+        const markerGroups = markerGroup
+            .selectAll("g")
+            .data(locations)
+            .join("g")
+            .attr("class", "marker-group");
 
-    markerGroups.append("circle")
-        .attr("class", "ping")
-        .attr("fill", "none")
-        .attr("stroke", "#949494")
-        .attr("stroke-width", 2)
-        .attr("opacity", 0)
-        .style("filter", "url(#glow)");
+        markerGroups.append("circle")
+            .attr("class", "ping")
+            .attr("fill", "none")
+            .attr("stroke", "#949494")
+            .attr("stroke-width", 2)
+            .attr("opacity", 0)
+            .style("filter", "url(#glow)");
 
-    markerGroups.append("circle")
-        .attr("class", "marker")
-        .attr("stroke", "#949494")
-        .attr("stroke-width", 2)
-        .attr("stroke-opacity", 1)
-        .style("filter", "url(#glow)");
+        markerGroups.append("circle")
+            .attr("class", "marker")
+            .attr("stroke", "#949494")
+            .attr("stroke-width", 2)
+            .attr("stroke-opacity", 1)
+            .style("filter", "url(#glow)");
 
-    markerGroups.append("text")
-        .attr("class", "marker-label")
-        .attr("dx", 0)
-        .text((d) => d.name || "Unnamed")
-        .style("fill", "#333")
-        .style("font-family", "Arial, sans-serif")
-        .style("text-anchor", "middle")
-        .style("pointer-events", "none");
+        markerGroups.append("text")
+            .attr("class", "marker-label")
+            .attr("dx", 0)
+            .text((d) => d.name || "Unnamed")
+            .style("fill", "#333")
+            .style("font-family", "Arial, sans-serif")
+            .style("text-anchor", "middle")
+            .style("pointer-events", "none");
 
-    updateMarkers();
-}).catch(function (error) {
-    console.error("Error loading JSON:", error);
-});
+        updateMarkers();
+    })
+    .catch(function (error) {
+        console.error("Error loading JSON:", error);
+    });
 
 function updateMarkers() {
     if (!markerGroup) return;
@@ -151,19 +152,17 @@ function updateMarkers() {
                         d3.select(this)
                             .attr("r", markerSize)
                             .attr("opacity", 1)
-                            .energetica(
-                                () => ping.transition()
-                                    .duration(1500 / Math.sqrt(scaleFactor))
-                                    .ease(d3.easeCubicOut)
-                                    .attr("r", pingMaxSize)
-                                    .attr("opacity", 0)
-                                    .on("end", function () {
-                                        if (d === selectedMarker) {
-                                            d3.select(this).attr("r", markerSize);
-                                            updateMarkers();
-                                        }
-                                    })
-                            );
+                            .transition()
+                            .duration(1500 / Math.sqrt(scaleFactor))
+                            .ease(d3.easeCubicOut)
+                            .attr("r", pingMaxSize)
+                            .attr("opacity", 0)
+                            .on("end", function () {
+                                if (d === selectedMarker) {
+                                    d3.select(this).attr("r", markerSize);
+                                    updateMarkers();
+                                }
+                            });
                     }
                 });
         } else {
@@ -174,10 +173,21 @@ function updateMarkers() {
 
 let resize = () => {
     w = window.innerWidth;
-    h = window.innerHeight;
+    h = window.innerHeight * 0.8;
     scl = Math.min(w, h) / 2.5;
-    projection.translate([w / 2, h / 2]);
+    projection.translate([w / 2, h / 2]).scale(scl);
+
     svg.attr("width", w).attr("height", h);
+
+    interactionLayer.selectAll(".globe-area").remove();
+    interactionLayer.append("circle")
+        .attr("class", "globe-area")
+        .attr("cx", w / 2)
+        .attr("cy", h / 2)
+        .attr("r", scl)
+        .attr("fill", "transparent")
+        .attr("pointer-events", "all");
+
     map.selectAll("path").attr("d", path);
     updateMarkers();
 };
@@ -201,13 +211,17 @@ function switchProjection() {
     resize();
 }
 
-function dragstarted() {
-    gpos0 = projection.invert(d3.mouse(this));
+function dragstarted(d) {
+    const e = d3.event;
+    if (e.touches && e.touches.length > 1) return;
+    gpos0 = projection.invert([e.x, e.y]);
     c0 = projection.center();
 }
 
-function dragged() {
-    gpos1 = projection.invert(d3.mouse(this));
+function dragged(d) {
+    const e = d3.event;
+    if (e.touches && e.touches.length > 1) return;
+    gpos1 = projection.invert([e.x, e.y]);
     if (is3d) {
         o0 = projection.rotate();
         o1 = eulerAngles(gpos0, gpos1, o0);
@@ -217,8 +231,18 @@ function dragged() {
     updateMarkers();
 }
 
-function zoomed() {
-    projection.scale(d3.event.transform.translate(projection).k * scl);
+function zoomed(d) {
+    const e = d3.event;
+    if (e.sourceEvent && e.sourceEvent.touches && e.sourceEvent.touches.length !== 2) return;
+
+    const transform = e.transform;
+    let scale = transform.k;
+    const maxScale = 3; // Giới hạn zoom tối đa
+    scale = Math.min(scale, maxScale);
+
+    map.attr("transform", `translate(${w / 2}, ${h / 2}) scale(${scale}) translate(${-w / 2}, ${-h / 2})`);
+    markerGroup.attr("transform", `translate(${w / 2}, ${h / 2}) scale(${scale}) translate(${-w / 2}, ${-h / 2})`);
+
     map.selectAll("path").attr("d", path);
     updateMarkers();
 }

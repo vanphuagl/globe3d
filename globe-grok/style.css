@@ -7,6 +7,7 @@
 .globe {
   width: 100vw;
   height: 80vh;
+  position: relative;
 }
 
 .globe_container {
@@ -17,7 +18,6 @@
   justify-content: center;
   overflow: hidden;
   background-color: #f3f3f3;
-  cursor: all-scroll;
 }
 
 .ocean {
@@ -61,4 +61,8 @@
   font-family: Arial, sans-serif;
   text-anchor: middle;
   pointer-events: none;
+}
+
+.globe-svg g {
+  cursor: all-scroll;
 }
